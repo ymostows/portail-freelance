@@ -1,0 +1,85 @@
+// 1. Config standard
+generator client {
+  provider = "prisma-client"
+  // On a retiré la ligne 'output' pour utiliser le standard node_modules
+}
+
+// 2. Connexion sécurisée avec Supabase
+datasource db {
+  provider  = "postgresql"
+}
+
+// --- ENUMS ---
+
+enum UserRole {
+  FREELANCE
+  CLIENT
+}
+
+enum ProjectStatus {
+  PROPOSAL  // En proposition/devis
+  ACTIVE    // En cours
+  COMPLETED // Terminé
+  ARCHIVED  // Archivé
+}
+
+// --- MODELS ---
+
+model User {
+  id        String   @id // ID géré par Supabase Auth
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  role      UserRole @default(CLIENT)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects    Project[]
+  projectLogs ProjectLog[]
+  documents   Document[]
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      ProjectStatus @default(PROPOSAL) // Utilisation de l'Enum
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  clientId    String
+  client      User          @relation(fields: [clientId], references: [id])
+
+  projectLogs ProjectLog[]
+  documents   Document[]
+}
+
+model ProjectLog {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  size      Int
+  path      String
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  uploaderId String
+  uploader   User    @relation(fields: [uploaderId], references: [id])
+}
