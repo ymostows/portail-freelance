@@ -48,14 +48,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       {/* HEADER : Le Logo ou le nom de l'app */}
-      <SidebarHeader className="p-4 border-b">
+      <SidebarHeader className="py-4 px-4 border-b group-data-[collapsible=icon]:px-2">
             {/* On ajoute un petit carré de couleur ou on colore juste le texte */}
-            <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <div className="flex items-center gap-2 font-bold text-xl tracking-tight ">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
                     {/* F pour Freelance (ou ton logo SVG plus tard) */}
                     F
                 </div>
-                <span>Freelance SaaS</span>
+                <span className="group-data-[collapsible=icon]:hidden">Freelance SaaS</span>
             </div>
         </SidebarHeader>
 
