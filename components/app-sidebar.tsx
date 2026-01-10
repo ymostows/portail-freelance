@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { LogoutAlertDialog } from "@/components/auth/logout-alert-dialog"
 
 import {
   Sidebar,
@@ -94,6 +95,7 @@ export function AppSidebar() {
                     <User className="h-4 w-4" />
                     <span>Mon Profil</span>
                 </SidebarMenuButton>
+                <LogoutAlertDialog />
             </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
