@@ -8,9 +8,9 @@ import * as z from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { toast } from "sonner"; // 👈 Pour les notifications
-import { createClient } from "@/lib/supabase/client" //
+import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input"
+import { register } from "@/app/actions/auth"
 
 import {
   Form,
@@ -42,7 +42,6 @@ const formSchema = z.object({
 export function UserRegisterForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
-  const supabase = createClient() // 👈 Initialisation de Supabase
   const [showPassword, setShowPassword] = React.useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -57,31 +56,29 @@ export function UserRegisterForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    const { error, data } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
-    })
+    // 👇 CORRECTION : On extrait confirmPassword pour ne pas l'envoyer
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { confirmPassword, ...registrationData } = values;
 
-    if (error) {
+    // On envoie seulement email et password
+    const result = await register(registrationData);
+
+    if (result?.error) {
       setIsLoading(false)
       return toast.error("Erreur de l'inscription", {
-        description: error.message,
+        description: result.error,
       })
     }
 
-    if (!data.session) {
+    if (result?.success) {
         toast.success("Compte créé !", {
          description: "Vérifiez vos emails pour confirmer votre inscription.",
-       })
-     } else {
-       router.push("/dashboard")
-     }
-     
-     setIsLoading(false)
-   }
+       });
+       router.push("/dashboard");
+    }
+    
+    setIsLoading(false)
+  }
 
   return (
     <div className="grid gap-6">

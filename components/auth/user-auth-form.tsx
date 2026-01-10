@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"; // 👈 Pour les notifications
 import { createClient } from "@/lib/supabase/client" //
 import { PasswordInput } from "@/components/ui/password-input"
+import { login } from "@/app/actions/auth"
 
 import {
   Form,
@@ -51,26 +52,24 @@ export function UserAuthForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    })
+    const result = await login(values);
 
-    if (error) {
+    if (result?.error) {
       setIsLoading(false)
-      // Syntaxe Sonner pour une erreur
       return toast.error("Erreur de connexion", {
-        description: "Email ou mot de passe incorrect.",
+        description: "Email ou mot de passe incorrect.", // Tu peux utiliser result.error ici si tu veux le message précis
       })
     }
 
-    // Syntaxe Sonner pour un succès
     toast.success("Connexion réussie", {
       description: "Redirection vers le dashboard...",
     })
     
-    router.refresh()
+    // On laisse le routeur faire la navigation finale
+    router.refresh() // Rafraîchit les données serveur (cookies)
     router.push("/dashboard")
+    
+    // Note : pas besoin de setIsLoading(false) car on change de page
   }
 
   return (
