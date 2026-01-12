@@ -1,6 +1,6 @@
 // 1. Config standard
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   // On a retiré la ligne 'output' pour utiliser le standard node_modules
 }
 
@@ -35,7 +35,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects    Project[]
+  projectsOwned Project[] @relation("FreelanceOwner")
+  projectsAsClient Project[] @relation("ClientGuest")
+
   projectLogs ProjectLog[]
   documents   Document[]
 }
@@ -46,12 +48,20 @@ model Project {
   description String?
   dueDate     DateTime?
   status      ProjectStatus @default(PROPOSAL) // Utilisation de l'Enum
+  
+  objective String?  // Peut être null
+  deadline  DateTime?
+  budget    String?  // Peut être null
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  clientId    String
-  client      User          @relation(fields: [clientId], references: [id])
+  freelancerId String
+  freelancer   User   @relation("FreelanceOwner", fields: [freelancerId], references: [id])
+
+  inviteToken String? @unique
+  clientId     String?
+  client       User?   @relation("ClientGuest", fields: [clientId], references: [id])
 
   projectLogs ProjectLog[]
   documents   Document[]

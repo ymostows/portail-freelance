@@ -57,31 +57,31 @@ export default async function ProjectsPage() {
           {projects.map((project) => (
             <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="block transition-transform hover:-translate-y-1">
                 <Card>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base font-semibold">
-                        {project.title}
-                    </CardTitle>
-                    {/* Badge dynamique selon le status */}
-                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                        {project.status}
-                    </Badge>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-sm text-muted-foreground line-clamp-2">
-                        {project.description || "Aucune description"}
-                    </div>
-                </CardContent>
-                <CardFooter className="text-xs text-muted-foreground pt-4 border-t bg-muted/20">
-                    <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>
-                            Mis à jour {formatDistanceToNow(new Date(project.updatedAt), { 
-                                addSuffix: true, // Ajoute "il y a"
-                                locale: fr       // Met en français
-                            })}
-                        </span>
-                    </div>
-                </CardFooter>
+                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                        <CardTitle className="text-base font-semibold">
+                            {project.title}
+                        </CardTitle>
+                        {/* Badge dynamique selon le status */}
+                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                            {project.status}
+                        </Badge>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-sm text-muted-foreground line-clamp-2">
+                            {project.description || "Aucune description"}
+                        </div>
+                    </CardContent>
+                    <CardFooter className="text-xs text-muted-foreground pt-4 border-t bg-muted/20">
+                        <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                                Mis à jour {formatDistanceToNow(new Date(project.updatedAt), { 
+                                    addSuffix: true, // Ajoute "il y a"
+                                    locale: fr       // Met en français
+                                })}
+                            </span>
+                        </div>
+                    </CardFooter>
                 </Card>
             </Link>
           ))}
