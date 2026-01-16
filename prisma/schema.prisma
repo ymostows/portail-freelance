@@ -17,79 +17,123 @@ enum UserRole {
 }
 
 enum ProjectStatus {
-  PROPOSAL  // En proposition/devis
-  ACTIVE    // En cours
-  COMPLETED // Terminé
-  ARCHIVED  // Archivé
+  DRAFT       // Créé par le freelance, pas encore envoyé
+  ONBOARDING  // Invitation envoyée, client en cours d'inscription/wizard
+  ACTIVE      // Onboarding terminé, projet en cours
+  COMPLETED   // Terminé
+  ARCHIVED    // Archivé
+}
+
+enum MilestoneStatus {
+  PENDING           // À faire
+  IN_PROGRESS       // En cours
+  AWAITING_APPROVAL // Freelance demande validation
+  COMPLETED         // Validé par le client (ou freelance)
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
 }
 
 // --- MODELS ---
 
 model User {
-  id        String   @id // ID géré par Supabase Auth
+  id        String   @id // ID Supabase Auth
   email     String   @unique
-  firstName String?
-  lastName  String?
-  role      UserRole @default(CLIENT)
+  
+  // Infos de base
+  name      String?
+  avatarUrl String?
+
+  // Infos "Wizard Client" (Optionnel)
+  companyName String? 
+  website     String?
+
+  role      UserRole @default(FREELANCE) // Par défaut, ceux qui s'inscrivent sur la Home sont des Freelances
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projectsOwned Project[] @relation("FreelanceOwner")
+  // Relations
+  projectsOwned    Project[] @relation("FreelanceOwner")
   projectsAsClient Project[] @relation("ClientGuest")
 
-  projectLogs ProjectLog[]
+  // On garde Documents pour plus tard (commenté ou présent mais vide)
   documents   Document[]
 }
 
 model Project {
   id          String        @id @default(uuid())
-  title       String
-  description String?
-  dueDate     DateTime?
-  status      ProjectStatus @default(PROPOSAL) // Utilisation de l'Enum
+  name        String        // Titre du projet
+  status      ProjectStatus @default(DRAFT)
   
-  objective String?  // Peut être null
-  deadline  DateTime?
-  budget    String?  // Peut être null
+  // Données du Wizard (Rempli par le client ou le freelance)
+  description String?       // Le "Brief"
+  budget      String?       // Indicatif
+  dueDate     DateTime?     // Deadline souhaitée
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  // Relations Humaines
   freelancerId String
   freelancer   User   @relation("FreelanceOwner", fields: [freelancerId], references: [id])
 
-  inviteToken String? @unique
   clientId     String?
-  client       User?   @relation("ClientGuest", fields: [clientId], references: [id])
+  client       User?  @relation("ClientGuest", fields: [clientId], references: [id])
 
-  projectLogs ProjectLog[]
-  documents   Document[]
+  // Relations Fonctionnelles
+  invitations  ProjectInvitation[] // Pour inviter le client
+  milestones   Milestone[]         // La Timeline
+  documents    Document[]
 }
 
-model ProjectLog {
+// Nouvelle Table : Pour gérer l'invitation sécurisée
+model ProjectInvitation {
   id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
+  email     String   // Email du client invité
+  token     String   @unique // Token unique pour le lien magique
+  
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime // Validité du lien (ex: 7 jours)
 
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
 }
 
+// Nouvelle Table : La Timeline Verticale
+model Milestone {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  status      MilestoneStatus @default(PENDING)
+  
+  amount      Float?          // Optionnel: Montant lié à cette étape (utile pour plus tard)
+  dueDate     DateTime?
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// (Gardé pour plus tard, mais simplifié)
 model Document {
   id        String   @id @default(uuid())
   name      String
-  type      String
+  url       String
   size      Int
-  path      String
-  createdAt DateTime @default(now())
-
+  type      String
+  
   projectId String
   project   Project  @relation(fields: [projectId], references: [id])
-
+  
   uploaderId String
   uploader   User    @relation(fields: [uploaderId], references: [id])
+
+  createdAt DateTime @default(now())
 }

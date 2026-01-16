@@ -12,6 +12,7 @@ import { toast } from "sonner"; // 👈 Pour les notifications
 import { createClient } from "@/lib/supabase/client" //
 import { PasswordInput } from "@/components/ui/password-input"
 import { login } from "@/app/actions/auth"
+import { loginClient } from "@/app/actions/client-login"
 
 import {
   Form,
@@ -35,7 +36,11 @@ const formSchema = z.object({
     .regex(/[^a-zA-Z0-9]/, { message: "Il faut au moins un caractère spécial." }), // Caractère spécial
 })
 
-export function UserAuthForm() {
+interface UserAuthFormProps {
+  inviteToken?: string;
+}
+
+export function UserAuthForm({ inviteToken }: UserAuthFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
   const supabase = createClient()
@@ -52,24 +57,45 @@ export function UserAuthForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
+    // Si on a un token d'invitation, on utilise loginClient
+    if (inviteToken) {
+      const result = await loginClient({
+        ...values,
+        inviteToken,
+      });
+
+      if (result?.error) {
+        setIsLoading(false)
+        return toast.error("Erreur de connexion", {
+          description: result.error,
+        })
+      }
+
+      toast.success("Connexion réussie", {
+        description: "Invitation acceptée ! Redirection vers votre espace...",
+      })
+
+      router.refresh()
+      router.push(result.redirectTo || "/portal")
+      return
+    }
+
+    // Sinon, login classique
     const result = await login(values);
 
     if (result?.error) {
       setIsLoading(false)
       return toast.error("Erreur de connexion", {
-        description: "Email ou mot de passe incorrect.", // Tu peux utiliser result.error ici si tu veux le message précis
+        description: "Email ou mot de passe incorrect.",
       })
     }
 
     toast.success("Connexion réussie", {
       description: "Redirection vers le dashboard...",
     })
-    
-    // On laisse le routeur faire la navigation finale
-    router.refresh() // Rafraîchit les données serveur (cookies)
+
+    router.refresh()
     router.push("/dashboard")
-    
-    // Note : pas besoin de setIsLoading(false) car on change de page
   }
 
   return (
@@ -117,10 +143,9 @@ export function UserAuthForm() {
             />
             <Button disabled={isLoading}>
               {isLoading && (
-                // Petit spinner de chargement manuel (ou via une icône Lucide)
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
               )}
-              Connexion
+              {inviteToken ? "Connexion et accepter l'invitation" : "Connexion"}
             </Button>
           </div>
         </form>

@@ -138,7 +138,7 @@ export function UserRegisterForm() {
                         <FormMessage />
                     </FormItem>
                 )}
-                />
+              />
             <Button disabled={isLoading}>
               {isLoading && (
                 // Petit spinner de chargement manuel (ou via une icône Lucide)

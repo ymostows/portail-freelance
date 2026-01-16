@@ -1,34 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-
 export async function middleware(request: NextRequest) {
-
-  if (request.nextUrl.pathname === '/invite') {
-    const token = request.nextUrl.searchParams.get('token')
-    
-    // On décide où envoyer l'utilisateur (Register par défaut)
-    // Astuce : request.url permet de garder le bon domaine (localhost ou prod)
-    const redirectUrl = new URL('/register', request.url)
-    
-    // On crée la réponse de redirection
-    const response = NextResponse.redirect(redirectUrl)
-
-    // Si le token est présent, on le sauvegarde dans un cookie
-    if (token) {
-      response.cookies.set('invite_token', token, {
-        httpOnly: true, // Invisible pour le JS client (sécurité)
-        secure: process.env.NODE_ENV === 'production', // Uniquement HTTPS en prod
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 // Expire dans 24h
-      })
-    }
-
-    // On renvoie la réponse immédiatement, pas besoin d'aller plus loin
-    return response
-  }
-
+  
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -45,21 +19,11 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set({
-              name,
-              value,
-              ...options,
-            })
+            request.cookies.set({ name, value, ...options })
             response = NextResponse.next({
-              request: {
-                headers: request.headers,
-              },
+              request: { headers: request.headers },
             })
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-            })
+            response.cookies.set({ name, value, ...options })
           })
         },
       },
@@ -68,16 +32,31 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // ... (Garde ta logique de redirection CAS A et CAS B ici, elle ne change pas) ...
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
-  const isDashboardPage = request.nextUrl.pathname.startsWith('/dashboard')
+  // --- DÉFINITION DES ZONES ---
+  const path = request.nextUrl.pathname
+  const isAuthPage = path.startsWith('/login') || path.startsWith('/register')
+  
+  // Zones protégées
+  const isDashboardPage = path.startsWith('/dashboard') // Réservé Freelance
+  const isPortalPage = path.startsWith('/portal')       // Réservé Client
 
-  if (!user && isDashboardPage) {
+  // --- CAS A : Protection des Routes Privées (Si pas connecté) ---
+  if (!user && (isDashboardPage || isPortalPage)) {
+    // On redirige vers login, mais on peut garder l'url de retour si besoin
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // --- CAS B : Redirection Intelligente (Si déjà connecté) ---
   if (user && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    // On vérifie le rôle pour savoir où rediriger
+    const role = user.user_metadata?.role
+
+    if (role === 'CLIENT') {
+      return NextResponse.redirect(new URL('/portal', request.url))
+    } else {
+      // Par défaut (ou si Freelance), on envoie au dashboard
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
   }
 
   return response

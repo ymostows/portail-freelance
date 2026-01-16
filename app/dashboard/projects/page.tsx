@@ -1,12 +1,12 @@
-import { CreateProjectDialog } from "@/components/projects/create-project-dialog"
+import { CreateProjectDialog } from "@/components/dashboard/projects/create-project-dialog"
 import { createClient } from "@/lib/supabase/server"
-import { formatDistanceToNow } from "date-fns" // Optionnel: pour le "il y a 2 jours" (sinon utilise une date simple)
+import { prisma } from "@/lib/prisma" // ✅ On importe Prisma
+import { formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
 
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -14,20 +14,27 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock } from "lucide-react"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 
 export default async function ProjectsPage() {
-  // 1. Connexion à la base de données
+  // 1. Auth Check (Toujours via Supabase Auth)
   const supabase = await createClient()
-
-  // 2. Récupération de l'utilisateur (pour la sécurité RLS)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 3. Récupération des projets
-  // On trie par date de création décroissante (le plus récent en haut)
-  const { data: projects } = await supabase
-    .from("Project")
-    .select("*")
-    .order("createdAt", { ascending: false })
+  if (!user) {
+    redirect("/login")
+  }
+
+  // 2. Récupération via PRISMA
+  // On récupère uniquement les projets où je suis le freelancer
+  const projects = await prisma.project.findMany({
+    where: {
+      freelancerId: user.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
 
   return (
     <div className="space-y-6">
@@ -49,7 +56,6 @@ export default async function ProjectsPage() {
            <p className="text-sm text-muted-foreground mb-4">
              Commencez par créer votre premier projet pour activer le suivi.
            </p>
-           {/* On pourrait remettre le bouton ici aussi */}
         </div>
       ) : (
         /* 5. Affichage de la grille de projets */
@@ -58,16 +64,18 @@ export default async function ProjectsPage() {
             <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="block transition-transform hover:-translate-y-1">
                 <Card>
                     <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                        <CardTitle className="text-base font-semibold">
-                            {project.title}
+                        {/* ⚠️ Attention: C'est 'name' maintenant, pas 'title' */}
+                        <CardTitle className="text-base font-semibold truncate pr-2">
+                            {project.name}
                         </CardTitle>
-                        {/* Badge dynamique selon le status */}
-                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                        
+                        {/* Gestion des couleurs de badge selon l'Enum */}
+                        <Badge variant={project.status === 'ACTIVE' ? 'default' : 'secondary'}>
                             {project.status}
                         </Badge>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-sm text-muted-foreground line-clamp-2">
+                        <div className="text-sm text-muted-foreground line-clamp-2 h-10">
                             {project.description || "Aucune description"}
                         </div>
                     </CardContent>
@@ -76,8 +84,8 @@ export default async function ProjectsPage() {
                             <Clock className="h-3 w-3" />
                             <span>
                                 Mis à jour {formatDistanceToNow(new Date(project.updatedAt), { 
-                                    addSuffix: true, // Ajoute "il y a"
-                                    locale: fr       // Met en français
+                                    addSuffix: true, 
+                                    locale: fr       
                                 })}
                             </span>
                         </div>

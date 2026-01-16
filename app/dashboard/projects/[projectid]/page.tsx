@@ -1,11 +1,12 @@
-import { createClient } from "@/lib/supabase/server"
-import { notFound } from "next/navigation"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Calendar, Clock, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
-import { fr } from "date-fns/locale"
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+import { InviteClientDialog } from "@/components/dashboard/projects/invite-client-dialog";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -14,23 +15,24 @@ interface ProjectPageProps {
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
-  // 1. On récupère l'ID depuis l'URL (Next.js 15 demande un await sur params)
-  const { projectid } = await params
-  
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // 1. Next.js 15 : On doit await params
+  const resolvedParams = await params;
+  const projectid = resolvedParams.projectid;
 
-  // 2. On récupère le projet unique
-  // RLS s'assure toujours qu'on ne voit que NOS projets
-  const { data: project } = await supabase
-    .from("Project")
-    .select("*")
-    .eq("id", projectid) // On filtre par l'ID de l'URL
-    .single() // On dit à Supabase : "Je n'attends qu'un seul résultat, pas une liste"
+  // 2. On récupère le projet via PRISMA (et non Supabase direct)
+  // Cela nous permet d'avoir les types corrects et les relations
+  const project = await prisma.project.findUnique({
+    where: { 
+      id: projectid 
+    },
+    include: {
+      client: true // On récupère les infos du client s'il existe
+    }
+  });
 
-  // 3. Gestion 404 : Si l'ID n'existe pas ou n'est pas à moi
+  // 3. Gestion 404
   if (!project) {
-    notFound() // Affiche la page 404 standard de Next.js
+    notFound();
   }
 
   return (
@@ -46,8 +48,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </Link>
         
         <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight">{project.title}</h1>
-            <Badge variant={project.status === 'active' ? 'default' : 'secondary'} className="text-sm px-3 py-1">
+            <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+            {/* Attention : ton champ s'appelle 'name' dans le nouveau schema Prisma, plus 'title' */}
+            
+            <Badge variant={project.status === 'ACTIVE' ? 'default' : 'secondary'} className="text-sm px-3 py-1">
                 {project.status}
             </Badge>
         </div>
@@ -63,9 +67,22 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 </p>
             </div>
             
-            {/* C'est ICI qu'on mettra plus tard la liste des documents ou tâches */}
-            <div className="p-12 border border-dashed rounded-lg text-center text-muted-foreground">
-                Zone future pour les documents / tâches
+            {/* Zone Client (Nouveau) */}
+            <div className="p-6 border rounded-lg bg-card text-card-foreground shadow-sm">
+                <h3 className="font-semibold mb-2">Client assigné</h3>
+                {project.client ? (
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                            {project.client.name?.[0] || "C"}
+                        </div>
+                        <div>
+                            <p className="font-medium">{project.client.name || "Client"}</p>
+                            <p className="text-sm text-muted-foreground">{project.client.email}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">Aucun client n&apos;a encore rejoint ce projet.</p>
+                )}
             </div>
         </div>
 
@@ -86,7 +103,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                     </span>
                 </div>
                 
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t space-y-2">
+                     {/* CORRECTION ICI : On passe l'ID du projet récupéré, pas params.id */}
+                     <InviteClientDialog projectId={project.id} />
+                     
                      <Button className="w-full" variant="outline">
                         Modifier le projet
                      </Button>
