@@ -106,19 +106,21 @@ model ProjectInvitation {
 
 // Nouvelle Table : La Timeline Verticale
 model Milestone {
-  id          String          @id @default(uuid())
-  title       String
-  description String?
-  status      MilestoneStatus @default(PENDING)
+  id                String          @id @default(uuid())
+  title             String
+  description       String?
+  status            MilestoneStatus @default(PENDING)
+  order             Int             @default(0)  // Ordre d'affichage dans la timeline
+  estimatedDuration String?                      // Durée estimée (ex: "2 jours", "1 semaine")
   
-  amount      Float?          // Optionnel: Montant lié à cette étape (utile pour plus tard)
-  dueDate     DateTime?
+  amount            Float?          // Optionnel: Montant lié à cette étape (utile pour plus tard)
+  dueDate           DateTime?
 
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 // (Gardé pour plus tard, mais simplifié)

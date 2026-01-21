@@ -1,9 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/server" // ou ton chemin correct
 import { cookies } from "next/headers"
@@ -22,21 +21,16 @@ export default async function DashboardLayout({
   }
 
   const cookieStore = await cookies()
-  const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
+  const sidebarCookie = cookieStore.get("sidebar:state")
+  const defaultOpen = sidebarCookie ? sidebarCookie.value === "true" : true
 
   return (
     // On passe l'état par défaut (cookie) pour éviter le flash
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <h1 className="font-medium leading-none">Tableau de bord</h1>
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <SidebarInset className="flex flex-col h-screen" suppressHydrationWarning>
+        <DashboardHeader />
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0 overflow-auto min-h-0">
           {children}
         </div>
       </SidebarInset>

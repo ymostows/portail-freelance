@@ -90,12 +90,16 @@ export function UserAuthForm({ inviteToken }: UserAuthFormProps) {
       })
     }
 
+    // On adapte le message selon la destination
+    const isClient = result.redirectTo === '/portal';
     toast.success("Connexion réussie", {
-      description: "Redirection vers le dashboard...",
+      description: isClient
+        ? "Redirection vers votre espace client..."
+        : "Redirection vers le dashboard...",
     })
 
     router.refresh()
-    router.push("/dashboard")
+    router.push(result.redirectTo || "/dashboard")
   }
 
   return (

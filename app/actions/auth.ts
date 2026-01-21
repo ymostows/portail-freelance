@@ -20,7 +20,7 @@ export async function login(formData: { email: string; password: string }) {
   const supabase = await createClient();
 
   // 1. Tentative de connexion
-  const { error } = await supabase.auth.signInWithPassword(formData);
+  const { data, error } = await supabase.auth.signInWithPassword(formData);
 
   if (error) {
     // On renvoie l'erreur au client pour qu'il puisse l'afficher
@@ -30,11 +30,12 @@ export async function login(formData: { email: string; password: string }) {
   // 2. Si ça marche, on revalide le layout pour mettre à jour l'UI (ex: afficher l'avatar)
   revalidatePath('/', 'layout');
 
-  // 3. On retourne un succès. 
-  // Note : On pourrait rediriger ici avec redirect('/dashboard'), 
-  // mais si tu veux afficher un Toast de succès côté client avant, 
-  // il vaut mieux laisser le client gérer la redirection.
-  return { success: true };
+  // 3. On détermine l'URL de redirection selon le rôle de l'utilisateur
+  const role = data.user?.user_metadata?.role;
+  const redirectTo = role === 'CLIENT' ? '/portal' : '/dashboard';
+
+  // 4. On retourne un succès avec l'URL de redirection
+  return { success: true, redirectTo };
 }
 
 export async function register(formData: { email: string; password: string }) {
